@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+/* `dark:` utilities follow the .dark class on <html> (set by useTheme), not the OS directly. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens. Black / white base, crimson = brand & attention, green = good / healthy. */
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --fg: #09090b;
+  --fg-muted: #52525b;
+  --fg-subtle: #8a8a93;
+  --accent: #dc143c;          /* crimson */
+  --accent-hover: #b8102f;
+  --accent-soft: #fdecef;
+  --accent-text: #b8102f;
+  --good: #15803d;
+  --good-soft: #e7f5ec;
+  --good-text: #166534;
+  --ink-bar: #3f3f46;         /* neutral data bars */
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #000000;
+  --surface: #0b0b0c;
+  --surface-2: #161618;
+  --border: #232326;
+  --border-strong: #34343a;
+  --fg: #fafafa;
+  --fg-muted: #a1a1aa;
+  --fg-subtle: #71717a;
+  --accent: #e0153f;
+  --accent-hover: #f0284f;
+  --accent-soft: rgb(224 21 63 / 0.14);
+  --accent-text: #ff6b85;
+  --good: #22c55e;
+  --good-soft: rgb(34 197 94 / 0.12);
+  --good-text: #4ade80;
+  --ink-bar: #d4d4d8;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-good-text: var(--good-text);
+  --color-ink-bar: var(--ink-bar);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+
+/* Calm motion: slower, eased animations used across the app (animate-spin-slow, animate-ping-slow). */
+@theme {
+  --animate-spin-slow: spin 1.6s linear infinite;
+  --animate-ping-slow: ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Skeleton loader: a soft highlight sweeping slowly across, instead of a fast blink. */
+@keyframes shimmer {
+  0% { background-position: 150% 0; }
+  100% { background-position: -50% 0; }
+}
+.skeleton {
+  background-color: var(--surface-2);
+  background-image: linear-gradient(90deg, transparent 0%, var(--border) 50%, transparent 100%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 2.8s ease-in-out infinite;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* Highlight pulse when a citation jumps to its source card. */
+@keyframes cite-flash {
+  0% { box-shadow: 0 0 0 0 var(--accent); }
+  100% { box-shadow: 0 0 0 6px transparent; }
+}
+.cite-flash {
+  animation: cite-flash 0.9s ease-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Thin, theme-aware scrollbar (sidebar chat history). Thumb appears on hover. */
+/* Chrome/Edge/Safari: 4px custom thumb. (Setting scrollbar-width there would override it.) */
+/* Firefox: standard properties, its "thin" size. */
+@supports not selector(::-webkit-scrollbar) {
+  .thin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .thin-scrollbar:hover {
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
+.thin-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+.thin-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+}
