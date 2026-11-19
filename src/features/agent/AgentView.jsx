@@ -161,10 +161,10 @@ export function AgentView({ onSaved, onError }) {
           />
           <div>
             <SliderField
-              label="Relevance threshold"
-              help="If the best passage scores below this, the model gets no sources and can only greet, decline or ask to clarify."
+              label="Minimum passage relevance"
+              help="Passages scoring below this aren't sent to the model. Keep it low: the model itself judges whether the sources answer the question."
               value={draft.min_relevance}
-              min={0.3}
+              min={0}
               max={0.9}
               step={0.01}
               format={(v) => v.toFixed(2)}
@@ -257,7 +257,7 @@ function SliderField({ label, help, value, min, max, step, format, onChange }) {
 
 /** Shows the threshold against the score bands measured for the Gemini embedding model. */
 function ThresholdScale({ value, model }) {
-  const min = 0.3;
+  const min = 0;
   const max = 0.9;
   const pos = (v) => `${((v - min) / (max - min)) * 100}%`;
   const isGemini = model.includes('gemini');
@@ -274,12 +274,12 @@ function ThresholdScale({ value, model }) {
       </div>
       {isGemini ? (
         <p className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
-          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-subtle/60" /> Off-topic ≈ 0.50–0.60</span>
-          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-good" /> On-topic ≈ 0.72+</span>
-          <span className="flex items-center gap-1.5"><span className="w-1 h-2.5 rounded-sm bg-accent" /> Your threshold</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-subtle/60" /> Loosely related ≈ 0.50–0.65</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-good" /> Clearly relevant ≈ 0.72+</span>
+          <span className="flex items-center gap-1.5"><span className="w-1 h-2.5 rounded-sm bg-accent" /> Passages below this are dropped</span>
         </p>
       ) : (
-        <p className="mt-2.5 text-[11px] text-muted">Local fallback embeddings score lower; around 0.15 works well.</p>
+        <p className="mt-2.5 text-[11px] text-muted">Local fallback embeddings score lower; around 0.05 works well.</p>
       )}
     </div>
   );

@@ -4,13 +4,6 @@ import { formatMs } from '../../lib/format';
 import { SourcesPanel } from './SourcesPanel';
 import { TracePanel } from './TracePanel';
 
-/** Visual treatment for each guardrail outcome (see backend query_service). */
-const STATUS = {
-  insufficient: { icon: 'info', title: 'Outside the knowledge base', tone: 'neutral' },
-  clarify: { icon: 'help', title: 'Could you clarify?', tone: 'neutral' },
-  escalate: { icon: 'flag', title: 'Needs a person', tone: 'accent' },
-};
-
 /** One question + its answer (or loading / error state). */
 export function AnswerTurn({ turn, onRetry, onFeedback, onEscalate, onReply, onGoLibrary }) {
   return (
@@ -94,7 +87,6 @@ function Answer({ turn, onFeedback, onEscalate, onReply, onGoLibrary }) {
   const { result } = turn;
   const { evaluation, model, trace } = result;
   const status = result.status ?? 'answered';
-  const special = STATUS[status];
   const [focus, setFocus] = useState(null);
   const [copied, setCopied] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
@@ -116,55 +108,45 @@ function Answer({ turn, onFeedback, onEscalate, onReply, onGoLibrary }) {
     setEscalating(false);
   }
 
-  const gated = result.guardrail?.stage === 'retrieval_gate';
 
   return (
     <div className="flex gap-3">
       <AssistantMark />
       <div className="flex-1 min-w-0 flex flex-col gap-3 pt-0.5">
-        {special ? (
-          <div className={`rounded-2xl border p-4 ${special.tone === 'accent' ? 'border-accent/30 bg-accent-soft' : 'border-line bg-surface'}`}>
-            <p className={`flex items-center gap-2 text-sm font-semibold ${special.tone === 'accent' ? 'text-accent-text' : 'text-fg'}`}>
-              <Icon name={special.icon} size={16} /> {special.title}
-            </p>
-            <p className="mt-1.5 text-[15px] leading-7 text-fg">{result.answer}</p>
-            {status === 'clarify' && result.clarifying_question ? (
-              <p className="mt-3 rounded-xl bg-surface-2 px-3.5 py-2.5 text-sm text-fg">
-                <span className="text-subtle">Question: </span>
-                {result.clarifying_question}
-              </p>
-            ) : null}
-            {result.guardrail?.reason && status !== 'clarify' ? (
-              <p className="mt-2 text-xs text-subtle">{result.guardrail.reason}</p>
-            ) : null}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {status === 'clarify' ? (
-                <Button size="sm" onClick={() => onReply(result.clarifying_question)}>
-                  <Icon name="ask" size={13} /> Reply
-                </Button>
-              ) : null}
-              {status === 'insufficient' ? (
-                <Button size="sm" variant="secondary" onClick={onGoLibrary}>
-                  <Icon name="plus" size={13} /> Add a source
-                </Button>
-              ) : null}
-              {status !== 'escalate' && !result.escalated ? (
-                <Button size="sm" variant="ghost" loading={escalating} onClick={escalate}>
-                  <Icon name="flag" size={13} /> Escalate to a person
-                </Button>
-              ) : null}
-              {result.escalated ? <Badge tone="accent" icon="flag">In review queue</Badge> : null}
-            </div>
+        {/* Every reply is the model's own text, rendered the same way; status only adds small helpers. */}
+        <div className="text-[15px] leading-7 text-fg">
+          <AnswerText
+            text={result.answer}
+            sourceCount={result.sources.length}
+            onCite={(n) => setFocus({ n, nonce: Date.now() })}
+          />
+        </div>
+
+        {status === 'clarify' && result.clarifying_question ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5">
+            <Icon name="help" size={15} className="text-subtle" />
+            <p className="flex-1 min-w-0 text-sm text-fg">{result.clarifying_question}</p>
+            <Button size="sm" onClick={() => onReply(result.clarifying_question)}>
+              <Icon name="ask" size={13} /> Reply
+            </Button>
           </div>
-        ) : (
-          <div className="text-[15px] leading-7 text-fg">
-            <AnswerText
-              text={result.answer}
-              sourceCount={result.sources.length}
-              onCite={(n) => setFocus({ n, nonce: Date.now() })}
-            />
+        ) : null}
+
+        {status === 'insufficient' ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="outline" icon="info">Not in your sources</Badge>
+            <Button size="sm" variant="ghost" onClick={onGoLibrary}>
+              <Icon name="plus" size={13} /> Add a source
+            </Button>
           </div>
-        )}
+        ) : null}
+
+        {status === 'escalate' || result.escalated ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="accent" icon="flag">In review queue</Badge>
+            {result.escalation_reason ? <span className="text-xs text-muted">{result.escalation_reason}</span> : null}
+          </div>
+        ) : null}
 
         {status === 'answered' && evaluation.warnings.length > 0 ? (
           <ul className="rounded-xl border border-accent/20 bg-accent-soft px-3.5 py-2.5 space-y-1">
@@ -181,19 +163,13 @@ function Answer({ turn, onFeedback, onEscalate, onReply, onGoLibrary }) {
           sources={result.sources}
           citations={evaluation.citations}
           focus={focus}
-          label={gated ? 'Closest passages' : 'Sources'}
-          muted={gated}
         />
 
         <div className="flex flex-wrap items-center gap-1 -ml-2">
           {status === 'answered' ? <FeedbackButtons value={result.feedback} onChange={(rating) => onFeedback(turn, rating)} /> : null}
           <IconAction icon={copied ? 'check' : 'copy'} label={copied ? 'Copied' : 'Copy'} onClick={copy} />
-          {status === 'answered' ? (
-            result.escalated ? (
-              <Badge tone="accent" icon="flag" className="ml-1">In review queue</Badge>
-            ) : (
-              <IconAction icon="flag" label="Escalate to a person" onClick={escalate} disabled={escalating} />
-            )
+          {status !== 'escalate' && status !== 'smalltalk' && !result.escalated ? (
+            <IconAction icon="flag" label="Escalate to a person" onClick={escalate} disabled={escalating} />
           ) : null}
           <IconAction icon="activity" label="Show trace" onClick={() => setShowTrace((open) => !open)} pressed={showTrace} />
           <span className="ml-auto flex items-center gap-1.5">
